@@ -1,0 +1,45 @@
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+{{#if (includes features 'swagger')}}
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+{{/if}}
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  
+  // Global prefix
+  app.setGlobalPrefix('api');
+  
+  // Enable CORS
+  app.enableCors();
+  
+  // Validation pipe
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    forbidNonWhitelisted: true,
+  }));
+  
+  {{#if (includes features 'swagger')}}
+  // Swagger documentation
+  const config = new DocumentBuilder()
+    .setTitle('{{projectName}} API')
+    .setDescription('API documentation for {{projectName}}')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document);
+  {{/if}}
+  
+  const port = process.env.PORT || {{port}};
+  await app.listen(port);
+  
+  console.log(`Application is running on: http://localhost:${port}`);
+  {{#if (includes features 'swagger')}}
+  console.log(`Swagger docs available at: http://localhost:${port}/api-docs`);
+  {{/if}}
+}
+
+bootstrap();
