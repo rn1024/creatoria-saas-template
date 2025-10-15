@@ -1,0 +1,277 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: {{projectName}}_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: {{dbUsername}}
+      POSTGRES_PASSWORD: {{dbPassword}}
+      POSTGRES_DB: {{dbDatabase}}
+      TZ: Asia/Shanghai
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "{{dbPort}}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      {{#if (includes features 'db-init')}}
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      {{/if}}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{dbUsername}} -d {{dbDatabase}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  {{#if (includes features 'redis')}}
+  redis:
+    image: redis:7-alpine
+    container_name: {{projectName}}_redis
+    restart: unless-stopped
+    ports:
+      - "{{redisPort}}:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfilename "appendonly.aof"
+      --appendfsync everysec
+      {{#if redisPassword}}
+      --requirepass {{redisPassword}}
+      {{/if}}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", {{#if redisPassword}}"--pass", "{{redisPassword}}", {{/if}}"ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  {{/if}}
+
+  {{#if (includes features 'elasticsearch')}}
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: {{projectName}}_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - cluster.name={{projectName}}_cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  {{/if}}
+
+  {{#if (includes features 'kibana')}}
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: {{projectName}}_kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=changeme
+      - xpack.security.enabled=false
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  {{/if}}
+
+  {{#if (includes features 'rabbitmq')}}
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: {{projectName}}_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: {{rabbitmqUser}}
+      RABBITMQ_DEFAULT_PASS: {{rabbitmqPassword}}
+      RABBITMQ_DEFAULT_VHOST: {{projectName}}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  {{/if}}
+
+  {{#if (includes features 'mongodb')}}
+  mongodb:
+    image: mongo:7.0
+    container_name: {{projectName}}_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: {{mongoUsername}}
+      MONGO_INITDB_ROOT_PASSWORD: {{mongoPassword}}
+      MONGO_INITDB_DATABASE: {{mongoDatabase}}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  {{/if}}
+
+  {{#if (includes features 'minio')}}
+  minio:
+    image: minio/minio:latest
+    container_name: {{projectName}}_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: {{minioRootUser}}
+      MINIO_ROOT_PASSWORD: {{minioRootPassword}}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  {{/if}}
+
+  {{#if (includes features 'adminer')}}
+  adminer:
+    image: adminer:latest
+    container_name: {{projectName}}_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha
+    depends_on:
+      - postgres
+    networks:
+      - {{projectName}}_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  {{/if}}
+
+volumes:
+  postgres_data:
+    driver: local
+  {{#if (includes features 'redis')}}
+  redis_data:
+    driver: local
+  {{/if}}
+  {{#if (includes features 'elasticsearch')}}
+  es_data:
+    driver: local
+  {{/if}}
+  {{#if (includes features 'rabbitmq')}}
+  rabbitmq_data:
+    driver: local
+  {{/if}}
+  {{#if (includes features 'mongodb')}}
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  {{/if}}
+  {{#if (includes features 'minio')}}
+  minio_data:
+    driver: local
+  {{/if}}
+
+networks:
+  {{projectName}}_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16

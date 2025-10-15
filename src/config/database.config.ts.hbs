@@ -1,15 +1,67 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 
-export const typeOrmConfig = (): TypeOrmModuleOptions => ({
-  type: '{{lowerCase database}}' as any,
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '{{#if (eq database "PostgreSQL")}}5432{{else if (eq database "MySQL")}}3306{{else}}27017{{/if}}'),
-  username: process.env.DB_USERNAME || 'root',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_DATABASE || '{{projectName}}',
-  entities: [__dirname + '/../**/*.entity{.ts,.js}', __dirname + '/../../modules/**/*.entity{.ts,.js}'],
-  synchronize: process.env.NODE_ENV === 'development',
-  logging: process.env.NODE_ENV === 'development',
-  migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
-  migrationsTableName: 'migrations',
-});
+export const typeOrmConfig = (): TypeOrmModuleOptions => {
+  const dbType = process.env.DB_TYPE || '{{#if (eq database "PostgreSQL")}}postgres{{else if (eq database "MySQL")}}mysql{{else}}mongodb{{/if}}';
+  
+  // PostgreSQL configuration
+  if (dbType === 'postgres' || dbType === 'postgresql') {
+    return {
+      type: 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USERNAME || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      database: process.env.DB_DATABASE || '{{projectName}}',
+      entities: [__dirname + '/../**/*.entity{.ts,.js}', __dirname + '/../../modules/**/*.entity{.ts,.js}'],
+      synchronize: process.env.NODE_ENV === 'development',
+      logging: process.env.NODE_ENV === 'development',
+      migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+      migrationsTableName: 'migrations',
+    };
+  }
+
+  // MySQL configuration
+  if (dbType === 'mysql') {
+    return {
+      type: 'mysql',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '3306'),
+      username: process.env.DB_USERNAME || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_DATABASE || '{{projectName}}',
+      entities: [__dirname + '/../**/*.entity{.ts,.js}', __dirname + '/../../modules/**/*.entity{.ts,.js}'],
+      synchronize: process.env.NODE_ENV === 'development',
+      logging: process.env.NODE_ENV === 'development',
+      migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+      migrationsTableName: 'migrations',
+    };
+  }
+
+  // MongoDB configuration
+  if (dbType === 'mongodb') {
+    return {
+      type: 'mongodb',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '27017'),
+      database: process.env.DB_DATABASE || '{{projectName}}',
+      entities: [__dirname + '/../**/*.entity{.ts,.js}', __dirname + '/../../modules/**/*.entity{.ts,.js}'],
+      synchronize: process.env.NODE_ENV === 'development',
+      logging: process.env.NODE_ENV === 'development',
+    };
+  }
+
+  // Default to postgres
+  return {
+    type: 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    database: process.env.DB_DATABASE || '{{projectName}}',
+    entities: [__dirname + '/../**/*.entity{.ts,.js}', __dirname + '/../../modules/**/*.entity{.ts,.js}'],
+    synchronize: process.env.NODE_ENV === 'development',
+    logging: process.env.NODE_ENV === 'development',
+    migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+    migrationsTableName: 'migrations',
+  };
+};

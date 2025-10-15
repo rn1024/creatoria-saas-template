@@ -1,0 +1,41 @@
+import { Entity, Column } from 'typeorm';
+import { BaseEntity } from './base.entity';
+
+@Entity('operation_logs')
+export class OperationLogDO extends BaseEntity {
+  @Column()
+  userId: number;
+
+  @Column()
+  username: string;
+
+  @Column()
+  module: string;
+
+  @Column()
+  action: string;
+
+  @Column()
+  method: string;
+
+  @Column()
+  url: string;
+
+  @Column({ nullable: true })
+  ip?: string;
+
+  @Column({ nullable: true })
+  userAgent?: string;
+
+  @Column('json', { nullable: true })
+  params?: any;
+
+  @Column()
+  result: boolean;
+
+  @Column({ nullable: true })
+  errorMsg?: string;
+
+  @Column()
+  duration: number;
+}

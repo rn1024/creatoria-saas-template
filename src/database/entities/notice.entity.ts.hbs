@@ -1,0 +1,17 @@
+import { Entity, Column } from 'typeorm';
+import { BaseEntity } from './base.entity';
+
+@Entity('notices')
+export class NoticeDO extends BaseEntity {
+  @Column()
+  title: string;
+
+  @Column('text')
+  content: string;
+
+  @Column()
+  type: number;
+
+  @Column({ default: true })
+  status: boolean;
+}

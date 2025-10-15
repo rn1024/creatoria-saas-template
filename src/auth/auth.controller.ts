@@ -1,0 +1,149 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Request,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthBusinessService } from './auth-business.service';
+import {
+  AuthLoginReqVO,
+  AuthLoginRespVO,
+  AuthPermissionInfoRespVO,
+  AuthRegisterReqVO,
+  AuthSmsLoginReqVO,
+  AuthSendSmsCodeReqVO,
+  AuthResetPasswordReqVO,
+  AuthSocialLoginReqVO,
+} from './dto/auth.dto';
+import { CommonResult } from '@app/common';
+import { Public } from '@app/auth';
+
+/**
+ * 认证控制器，对齐 RuoYi-Vue-Pro 的 AuthController
+ */
+@ApiTags('system - 认证管理')
+@Controller('/admin-api/system/auth')
+export class AuthController {
+  constructor(private readonly authBusinessService: AuthBusinessService) {}
+
+  @Post('/login')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '使用账号密码登录' })
+  async login(
+    @Body() loginReqVO: AuthLoginReqVO,
+    @Request() req: any,
+  ): Promise<CommonResult<AuthLoginRespVO>> {
+    const clientIP = req.ip || req.connection.remoteAddress || '127.0.0.1';
+    const result = await this.authBusinessService.login(loginReqVO, clientIP);
+    return CommonResult.success(result);
+  }
+
+  @Post('/logout')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '登出系统' })
+  async logout(@Request() req: any): Promise<CommonResult<boolean>> {
+    const userId = req.user?.userId;
+    if (userId) {
+      await this.authBusinessService.logout(userId);
+    }
+    return CommonResult.success(true);
+  }
+
+  @Post('/refresh-token')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '刷新令牌' })
+  async refreshToken(
+    @Body('refreshToken') refreshToken: string,
+  ): Promise<CommonResult<AuthLoginRespVO>> {
+    const result = await this.authBusinessService.refreshToken(refreshToken);
+    return CommonResult.success(result);
+  }
+
+  @Get('/get-permission-info')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取用户权限信息' })
+  async getPermissionInfo(
+    @Request() req: any,
+  ): Promise<CommonResult<AuthPermissionInfoRespVO>> {
+    const userId = req.user?.userId;
+    const result = await this.authBusinessService.getPermissionInfo(userId);
+    return CommonResult.success(result);
+  }
+
+  @Post('/register')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '用户注册' })
+  async register(
+    @Body() registerReqVO: AuthRegisterReqVO,
+  ): Promise<CommonResult<AuthLoginRespVO>> {
+    const result = await this.authBusinessService.register(registerReqVO);
+    return CommonResult.success(result);
+  }
+
+  @Post('/sms-login')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '短信登录' })
+  async smsLogin(
+    @Body() smsLoginReqVO: AuthSmsLoginReqVO,
+  ): Promise<CommonResult<AuthLoginRespVO>> {
+    const result = await this.authBusinessService.smsLogin(smsLoginReqVO);
+    return CommonResult.success(result);
+  }
+
+  @Post('/send-sms-code')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '发送短信验证码' })
+  async sendSmsCode(
+    @Body() sendSmsCodeReqVO: AuthSendSmsCodeReqVO,
+  ): Promise<CommonResult<boolean>> {
+    await this.authBusinessService.sendSmsCode(sendSmsCodeReqVO);
+    return CommonResult.success(true);
+  }
+
+  @Post('/reset-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '重置密码' })
+  async resetPassword(
+    @Body() resetPasswordReqVO: AuthResetPasswordReqVO,
+  ): Promise<CommonResult<boolean>> {
+    await this.authBusinessService.resetPassword(resetPasswordReqVO);
+    return CommonResult.success(true);
+  }
+
+  @Get('/social-auth-redirect')
+  @Public()
+  @ApiOperation({ summary: '社交登录重定向' })
+  async socialAuthRedirect(
+    @Query('type') type: string,
+    @Query('redirectUri') redirectUri: string,
+  ): Promise<CommonResult<string>> {
+    const result = await this.authBusinessService.getSocialAuthRedirectUrl(
+      type,
+      redirectUri,
+    );
+    return CommonResult.success(result);
+  }
+
+  @Post('/social-login')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '社交快速登录' })
+  async socialLogin(
+    @Body() socialLoginReqVO: AuthSocialLoginReqVO,
+  ): Promise<CommonResult<AuthLoginRespVO>> {
+    const result = await this.authBusinessService.socialLogin(socialLoginReqVO);
+    return CommonResult.success(result);
+  }
+}

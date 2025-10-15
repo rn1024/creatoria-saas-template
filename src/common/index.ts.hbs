@@ -1,0 +1,11 @@
+import { SetMetadata } from '@nestjs/common';
+
+// 导出装饰器
+export const IS_PUBLIC_KEY = 'isPublic';
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+
+export const TENANT_IGNORE_KEY = 'tenantIgnore';
+export const TenantIgnore = () => SetMetadata(TENANT_IGNORE_KEY, true);
+
+// 导出结果类
+export * from './result';

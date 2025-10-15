@@ -1,40 +1,37 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 {{#if (includes features 'database')}}
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { typeOrmConfig } from './config/database.config';
+import { DatabaseModule } from './database/database.module';
 {{/if}}
-{{#if (includes features 'cache')}}
-import { CacheModule } from '@nestjs/cache-manager';
-import { cacheConfig } from './config/cache.config';
+{{#if (includes features 'auth')}}
+import { AuthModule } from './auth/auth.module';
+{{/if}}
+{{#if (includes features 'common')}}
+import { CommonModule } from './common/common.module';
+{{/if}}
+{{#if (includes features 'system')}}
+import { SystemModule } from './system/system.module';
 {{/if}}
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ModuleLoaderModule } from './common/module-loader/module-loader.module';
-{{#if (includes features 'auth')}}
-import { AuthModule } from './modules/auth/auth.module';
-{{/if}}
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
     }),
     {{#if (includes features 'database')}}
-    TypeOrmModule.forRootAsync({
-      useFactory: () => typeOrmConfig(),
-    }),
+    DatabaseModule,
     {{/if}}
-    {{#if (includes features 'cache')}}
-    CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: () => cacheConfig(),
-    }),
+    {{#if (includes features 'common')}}
+    CommonModule,
     {{/if}}
-    ModuleLoaderModule,
     {{#if (includes features 'auth')}}
     AuthModule,
+    {{/if}}
+    {{#if (includes features 'system')}}
+    SystemModule,
     {{/if}}
   ],
   controllers: [AppController],

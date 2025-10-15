@@ -1,0 +1,33 @@
+import { Entity, Column, ManyToMany, JoinTable } from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { UserDO } from './user.entity';
+import { MenuDO } from './menu.entity';
+
+@Entity('roles')
+export class RoleDO extends BaseEntity {
+  @Column({ unique: true })
+  name: string;
+
+  @Column()
+  displayName: string;
+
+  @Column({ nullable: true })
+  description?: string;
+
+  @Column({ default: 0 })
+  sort: number;
+
+  @Column({ default: true })
+  status: boolean;
+
+  @ManyToMany(() => UserDO, user => user.roles)
+  users: UserDO[];
+
+  @ManyToMany(() => MenuDO)
+  @JoinTable({
+    name: 'role_menus',
+    joinColumn: { name: 'role_id' },
+    inverseJoinColumn: { name: 'menu_id' }
+  })
+  menus: MenuDO[];
+}

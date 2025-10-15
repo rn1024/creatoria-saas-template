@@ -1,0 +1,50 @@
+{{#if (includes features 'cache')}}
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+
+@Injectable()
+export class RedisService {
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+
+  async get<T>(key: string): Promise<T | undefined> {
+    return await this.cacheManager.get<T>(key);
+  }
+
+  async set(key: string, value: any, ttl?: number): Promise<void> {
+    await this.cacheManager.set(key, value, ttl);
+  }
+
+  async del(key: string): Promise<void> {
+    await this.cacheManager.del(key);
+  }
+
+  async reset(): Promise<void> {
+    const store = this.cacheManager.store as any;
+    if (store.reset) {
+      await store.reset();
+    } else if (store.flushAll) {
+      await store.flushAll();
+    } else if (store.flushdb) {
+      await store.flushdb();
+    } else {
+      throw new Error('Cache store does not support reset operation');
+    }
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    const store = this.cacheManager.store as any;
+    if (store.keys) {
+      return await store.keys(pattern);
+    }
+    return [];
+  }
+
+  async ttl(key: string): Promise<number> {
+    const store = this.cacheManager.store as any;
+    if (store.ttl) {
+      return await store.ttl(key);
+    }
+    return -1;
+  }
+}
+{{/if}}

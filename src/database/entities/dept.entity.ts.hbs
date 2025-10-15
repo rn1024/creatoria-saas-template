@@ -1,0 +1,34 @@
+import { Entity, Column, Tree, TreeChildren, TreeParent, OneToMany } from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { UserDO } from './user.entity';
+
+@Entity('departments')
+@Tree('closure-table')
+export class DeptDO extends BaseEntity {
+  @Column()
+  name: string;
+
+  @Column({ default: 0 })
+  sort: number;
+
+  @Column({ nullable: true })
+  leaderUserId?: number;
+
+  @Column({ nullable: true })
+  phone?: string;
+
+  @Column({ nullable: true })
+  email?: string;
+
+  @Column({ default: true })
+  status: boolean;
+
+  @TreeChildren()
+  children: DeptDO[];
+
+  @TreeParent()
+  parent: DeptDO;
+
+  @OneToMany(() => UserDO, user => user.dept)
+  users: UserDO[];
+}

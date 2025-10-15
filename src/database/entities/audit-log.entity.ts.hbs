@@ -1,0 +1,32 @@
+import { Entity, Column } from 'typeorm';
+import { BaseEntity } from './base.entity';
+
+@Entity('audit_logs')
+export class AuditLogDO extends BaseEntity {
+  @Column()
+  userId: number;
+
+  @Column()
+  username: string;
+
+  @Column()
+  entityName: string;
+
+  @Column()
+  entityId: number;
+
+  @Column()
+  operation: string; // CREATE, UPDATE, DELETE
+
+  @Column('json', { nullable: true })
+  oldData?: any;
+
+  @Column('json', { nullable: true })
+  newData?: any;
+
+  @Column({ nullable: true })
+  ip?: string;
+
+  @Column({ nullable: true })
+  userAgent?: string;
+}

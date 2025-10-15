@@ -1,0 +1,92 @@
+import { Module, Global } from '@nestjs/common';
+import { APP_PIPE, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
+{{#if (includes features 'cache')}}
+import { CacheModule } from '@nestjs/cache-manager';
+{{/if}}
+{{#if (includes features 'validation')}}
+import { ValidationPipe } from '@nestjs/common';
+{{/if}}
+{{#if (includes features 'transform')}}
+import { ClassSerializerInterceptor } from '@nestjs/common';
+{{/if}}
+{{#if (includes features 'http-exception')}}
+import { HttpExceptionFilter } from './filters/http-exception.filter';
+{{/if}}
+{{#if (includes features 'transform-interceptor')}}
+import { TransformInterceptor } from './interceptors/transform.interceptor';
+{{/if}}
+{{#if (includes features 'logging')}}
+import { LoggingInterceptor } from './interceptors/logging.interceptor';
+{{/if}}
+
+/**
+ * 全局公共模块
+ * 提供全局共享的服务和配置
+ */
+@Global()
+@Module({
+  imports: [
+    {{#if (includes features 'cache')}}
+    // 缓存模块
+    CacheModule.register({
+      ttl: 60, // 默认缓存60秒
+      max: 100, // 最多缓存100个项目
+      isGlobal: true,
+    }),
+    {{/if}}
+  ],
+  providers: [
+    {{#if (includes features 'validation')}}
+    // 全局验证管道
+    {
+      provide: APP_PIPE,
+      useFactory: () => new ValidationPipe({
+        whitelist: true, // 移除DTO中未定义的属性
+        transform: true, // 自动转换类型
+        forbidNonWhitelisted: true, // 拒绝未定义的属性
+        transformOptions: {
+          enableImplicitConversion: true, // 启用隐式类型转换
+        },
+      }),
+    },
+    {{/if}}
+    
+    {{#if (includes features 'transform')}}
+    // 全局序列化拦截器
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ClassSerializerInterceptor,
+    },
+    {{/if}}
+    
+    {{#if (includes features 'transform-interceptor')}}
+    // 全局响应转换拦截器
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
+    {{/if}}
+    
+    {{#if (includes features 'logging')}}
+    // 全局日志拦截器
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {{/if}}
+    
+    {{#if (includes features 'http-exception')}}
+    // 全局异常过滤器
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+    {{/if}}
+  ],
+  exports: [
+    {{#if (includes features 'cache')}}
+    CacheModule,
+    {{/if}}
+  ],
+})
+export class CommonModule {}

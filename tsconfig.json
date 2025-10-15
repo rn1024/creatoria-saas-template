@@ -21,7 +21,14 @@
       "@/*": ["src/*"],
       "@modules/*": ["modules/*"],
       "@common/*": ["src/common/*"],
-      "@config/*": ["src/config/*"]
+      "@config/*": ["src/config/*"],
+      "@app/common": ["src/common/index"],
+      "@app/common/*": ["src/common/*"],
+      "@app/auth": ["src/auth/index"],
+      "@app/auth/*": ["src/auth/*"],
+      "@app/database/*": ["src/database/*"],
+      "@app/redis": ["src/redis/index"],
+      "@app/shared/*": ["src/shared/*"]
     }
   }
 }

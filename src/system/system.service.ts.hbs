@@ -1,0 +1,106 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SysConfig } from './entities/config.entity';
+import { SysLog } from './entities/log.entity';
+
+@Injectable()
+export class SystemService {
+  constructor(
+    @InjectRepository(SysConfig)
+    private configRepository: Repository<SysConfig>,
+    @InjectRepository(SysLog)
+    private logRepository: Repository<SysLog>,
+  ) {}
+
+  /**
+   * 获取系统配置
+   */
+  async getConfig(key: string): Promise<string | null> {
+    const config = await this.configRepository.findOne({ where: { key, enabled: true } });
+    return config?.value || null;
+  }
+
+  /**
+   * 设置系统配置
+   */
+  async setConfig(key: string, value: string, description?: string): Promise<SysConfig> {
+    let config = await this.configRepository.findOne({ where: { key } });
+    if (config) {
+      config.value = value;
+      if (description) config.description = description;
+    } else {
+      config = this.configRepository.create({ key, value, description });
+    }
+    return this.configRepository.save(config);
+  }
+
+  /**
+   * 获取所有配置
+   */
+  async getAllConfigs(): Promise<SysConfig[]> {
+    return this.configRepository.find({ where: { enabled: true } });
+  }
+
+  /**
+   * 记录系统日志
+   */
+  async log(data: Partial<SysLog>): Promise<SysLog> {
+    const log = this.logRepository.create(data);
+    return this.logRepository.save(log);
+  }
+
+  /**
+   * 获取系统日志
+   */
+  async getLogs(query: any): Promise<{ items: SysLog[]; total: number }> {
+    const qb = this.logRepository.createQueryBuilder('log');
+    
+    if (query.userId) {
+      qb.andWhere('log.userId = :userId', { userId: query.userId });
+    }
+    if (query.module) {
+      qb.andWhere('log.module = :module', { module: query.module });
+    }
+    if (query.level) {
+      qb.andWhere('log.level = :level', { level: query.level });
+    }
+    
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+    
+    qb.orderBy('log.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+    
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
+
+  /**
+   * 获取系统信息
+   */
+  async getSystemInfo(): Promise<any> {
+    return {
+      name: '{{projectName}}',
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+    };
+  }
+
+  /**
+   * 健康检查
+   */
+  async healthCheck(): Promise<any> {
+    const dbConnection = await this.configRepository.query('SELECT 1');
+    return {
+      status: 'healthy',
+      database: dbConnection ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}

@@ -1,0 +1,66 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+@Module({
+  imports: [
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService): TypeOrmModuleOptions => {
+        const dbType = '{{dbType}}' as 'postgres' | 'mysql' | 'mariadb';
+        
+        // 基础配置
+        const baseConfig: TypeOrmModuleOptions = {
+          type: dbType,
+          host: configService.get<string>('DB_HOST', '{{dbHost}}'),
+          port: configService.get<number>('DB_PORT', {{dbPort}}),
+          username: configService.get<string>('DB_USERNAME', '{{dbUsername}}'),
+          password: configService.get<string>('DB_PASSWORD', '{{dbPassword}}'),
+          database: configService.get<string>('DB_DATABASE', '{{dbDatabase}}'),
+          
+          // 实体配置
+          autoLoadEntities: true, // 自动加载所有通过forFeature注册的实体
+          entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+          
+          // 同步配置
+          synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
+          
+          // 日志配置
+          logging: configService.get<boolean>('DB_LOGGING', false),
+          logger: 'advanced-console',
+          
+          // 连接池配置
+          extra: {
+            max: configService.get<number>('DB_POOL_MAX', 10),
+            min: configService.get<number>('DB_POOL_MIN', 2),
+            idleTimeoutMillis: configService.get<number>('DB_IDLE_TIMEOUT', 30000),
+            charset: 'utf8mb4',
+          },
+          
+          // 重试配置
+          retryAttempts: configService.get<number>('DB_RETRY_ATTEMPTS', 3),
+          retryDelay: configService.get<number>('DB_RETRY_DELAY', 3000),
+          
+          // SSL配置
+          ssl: configService.get<boolean>('DB_SSL', false),
+          
+          // 缓存配置
+          cache: configService.get<boolean>('DB_CACHE', false)
+            ? {
+                type: 'redis' as const,
+                options: {
+                  host: configService.get<string>('REDIS_HOST', 'localhost'),
+                  port: configService.get<number>('REDIS_PORT', 6379),
+                },
+              }
+            : false,
+        };
+        
+        return baseConfig;
+      },
+    }),
+  ],
+  exports: [TypeOrmModule],
+})
+export class DatabaseModule {}

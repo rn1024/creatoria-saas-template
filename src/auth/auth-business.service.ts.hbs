@@ -1,0 +1,277 @@
+import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { AuthService } from './auth.service';
+import {
+  AuthLoginReqVO,
+  AuthLoginRespVO,
+  AuthPermissionInfoRespVO,
+  AuthRegisterReqVO,
+  AuthSmsLoginReqVO,
+  AuthSendSmsCodeReqVO,
+  AuthResetPasswordReqVO,
+  AuthSocialLoginReqVO,
+} from './dto/auth.dto';
+import { CommonResult } from '@app/common';
+
+@Injectable()
+export class AuthBusinessService {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  /**
+   * 用户登录
+   */
+  async login(loginReq: AuthLoginReqVO, clientIP?: string): Promise<AuthLoginRespVO> {
+    // 验证用户
+    const user = await this.authService.validateUser(loginReq.username, loginReq.password);
+    
+    if (!user) {
+      throw new Error('用户名或密码错误');
+    }
+
+    // 生成token
+    const payload = { 
+      sub: user.id, 
+      username: user.username,
+      {{#if (includes features 'tenant')}}
+      tenantId: user.tenantId,
+      {{/if}}
+    };
+    
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
+
+    {{#if (includes features 'audit')}}
+    // 记录登录日志
+    await this.authService.logLogin(user.id, clientIP);
+    {{/if}}
+
+    return {
+      accessToken,
+      refreshToken,
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  /**
+   * 用户登出
+   */
+  async logout(userId: number): Promise<boolean> {
+    {{#if (includes features 'redis')}}
+    // 将token加入黑名单
+    await this.authService.blacklistToken(userId);
+    {{/if}}
+    
+    {{#if (includes features 'audit')}}
+    // 记录登出日志
+    await this.authService.logLogout(userId);
+    {{/if}}
+    
+    return true;
+  }
+
+  /**
+   * 刷新token
+   */
+  async refreshToken(refreshToken: string): Promise<AuthLoginRespVO> {
+    try {
+      const payload = this.jwtService.verify(refreshToken);
+      const user = await this.authService.findById(payload.sub);
+      
+      if (!user) {
+        throw new Error('用户不存在');
+      }
+
+      const newPayload = { 
+        sub: user.id, 
+        username: user.username,
+        {{#if (includes features 'tenant')}}
+        tenantId: user.tenantId,
+        {{/if}}
+      };
+      
+      const accessToken = this.jwtService.sign(newPayload);
+      const newRefreshToken = this.jwtService.sign(newPayload, { expiresIn: '30d' });
+
+      return {
+        accessToken,
+        refreshToken: newRefreshToken,
+        user: this.sanitizeUser(user),
+      };
+    } catch (error) {
+      throw new Error('刷新token失败');
+    }
+  }
+
+  /**
+   * 获取权限信息
+   */
+  async getPermissionInfo(userId: number): Promise<AuthPermissionInfoRespVO> {
+    const user = await this.authService.findById(userId);
+    
+    if (!user) {
+      throw new Error('用户不存在');
+    }
+
+    {{#if (includes features 'rbac')}}
+    const permissions = await this.authService.getUserPermissions(userId);
+    const roles = await this.authService.getUserRoles(userId);
+    {{else}}
+    const permissions = ['system:user:list', 'system:user:create'];
+    const roles = ['admin'];
+    {{/if}}
+
+    return {
+      permissions,
+      roles,
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  /**
+   * 用户注册
+   */
+  async register(registerReq: AuthRegisterReqVO): Promise<AuthLoginRespVO> {
+    // 检查用户名是否存在
+    const existingUser = await this.authService.findByUsername(registerReq.username);
+    if (existingUser) {
+      throw new Error('用户名已存在');
+    }
+
+    // 创建用户
+    const user = await this.authService.createUser({
+      username: registerReq.username,
+      password: registerReq.password,
+      {{#if (includes features 'email')}}
+      email: registerReq.email,
+      {{/if}}
+      {{#if (includes features 'mobile')}}
+      mobile: registerReq.mobile,
+      {{/if}}
+    });
+
+    // 自动登录
+    return this.login({
+      username: registerReq.username,
+      password: registerReq.password,
+    });
+  }
+
+  {{#if (includes features 'sms')}}
+  /**
+   * 短信登录
+   */
+  async smsLogin(smsLoginReq: AuthSmsLoginReqVO): Promise<AuthLoginRespVO> {
+    // 验证短信验证码
+    const isValid = await this.authService.verifySmsCode(
+      smsLoginReq.mobile,
+      smsLoginReq.code,
+    );
+
+    if (!isValid) {
+      throw new Error('验证码错误或已过期');
+    }
+
+    // 查找或创建用户
+    let user = await this.authService.findByMobile(smsLoginReq.mobile);
+    if (!user) {
+      user = await this.authService.createUserByMobile(smsLoginReq.mobile);
+    }
+
+    // 生成token
+    const payload = { sub: user.id, username: user.username };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  /**
+   * 发送短信验证码
+   */
+  async sendSmsCode(sendReq: AuthSendSmsCodeReqVO): Promise<boolean> {
+    return await this.authService.sendSmsCode(sendReq.mobile, sendReq.scene);
+  }
+  {{/if}}
+
+  /**
+   * 重置密码
+   */
+  async resetPassword(resetReq: AuthResetPasswordReqVO): Promise<boolean> {
+    {{#if (includes features 'sms')}}
+    // 验证短信验证码
+    const isValid = await this.authService.verifySmsCode(
+      resetReq.username,
+      resetReq.code,
+    );
+
+    if (!isValid) {
+      throw new Error('验证码错误或已过期');
+    }
+    {{/if}}
+
+    // 重置密码
+    return await this.authService.resetPassword(
+      resetReq.username,
+      resetReq.password,
+    );
+  }
+
+  {{#if (includes features 'social')}}
+  /**
+   * 获取社交登录重定向URL
+   */
+  async getSocialAuthRedirectUrl(type: string, redirectUri: string): Promise<string> {
+    return await this.authService.getSocialAuthUrl(type, redirectUri);
+  }
+
+  /**
+   * 社交登录
+   */
+  async socialLogin(socialReq: AuthSocialLoginReqVO): Promise<AuthLoginRespVO> {
+    // 通过授权码获取用户信息
+    const socialUser = await this.authService.getSocialUserInfo(
+      socialReq.type,
+      socialReq.code,
+    );
+
+    // 查找或创建用户
+    let user = await this.authService.findBySocialId(
+      socialReq.type,
+      socialUser.id,
+    );
+    
+    if (!user) {
+      user = await this.authService.createUserFromSocial(
+        socialReq.type,
+        socialUser,
+      );
+    }
+
+    // 生成token
+    const payload = { sub: user.id, username: user.username };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: this.sanitizeUser(user),
+    };
+  }
+  {{/if}}
+
+  /**
+   * 清理用户敏感信息
+   */
+  private sanitizeUser(user: any): any {
+    const { password, salt, ...sanitized } = user;
+    return sanitized;
+  }
+}

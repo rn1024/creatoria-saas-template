@@ -1,0 +1,161 @@
+import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private jwtService: JwtService,
+  ) {}
+
+  async validateUser(username: string, password: string): Promise<any> {
+    // TODO: Implement user validation with database
+    // This is a placeholder implementation
+    if (username === 'admin' && password === 'admin123') {
+      return { id: 1, username: 'admin', email: 'admin@example.com' };
+    }
+    return null;
+  }
+
+  async findById(id: number): Promise<any> {
+    // TODO: Implement user lookup by ID from database
+    // This is a placeholder implementation
+    if (id === 1) {
+      return { id: 1, username: 'admin', email: 'admin@example.com' };
+    }
+    return null;
+  }
+
+  async findByUsername(username: string): Promise<any> {
+    // TODO: Implement user lookup by username from database
+    // This is a placeholder implementation
+    if (username === 'admin') {
+      return { id: 1, username: 'admin', email: 'admin@example.com' };
+    }
+    return null;
+  }
+
+  async findByMobile(mobile: string): Promise<any> {
+    // TODO: Implement user lookup by mobile from database
+    // This is a placeholder implementation
+    return null;
+  }
+
+  async findBySocialId(provider: string, socialId: string): Promise<any> {
+    // TODO: Implement user lookup by social ID from database
+    // This is a placeholder implementation
+    return null;
+  }
+
+  async createUser(userData: any): Promise<any> {
+    // TODO: Implement user creation in database
+    // This is a placeholder implementation
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    return {
+      id: Math.floor(Math.random() * 1000),
+      username: userData.username,
+      email: userData.email,
+      mobile: userData.mobile,
+      password: hashedPassword,
+    };
+  }
+
+  async createUserByMobile(mobile: string): Promise<any> {
+    // TODO: Implement user creation by mobile in database
+    // This is a placeholder implementation
+    return {
+      id: Math.floor(Math.random() * 1000),
+      username: mobile,
+      mobile: mobile,
+    };
+  }
+
+  async createUserFromSocial(provider: string, socialUser: any): Promise<any> {
+    // TODO: Implement user creation from social login in database
+    // This is a placeholder implementation
+    return {
+      id: Math.floor(Math.random() * 1000),
+      username: socialUser.username || socialUser.email,
+      email: socialUser.email,
+      avatar: socialUser.avatar,
+      socialProvider: provider,
+      socialId: socialUser.id,
+    };
+  }
+
+  async resetPassword(username: string, newPassword: string): Promise<boolean> {
+    // TODO: Implement password reset in database
+    // This is a placeholder implementation
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log(`Password reset for ${username}: ${hashedPassword}`);
+    return true;
+  }
+
+  async verifySmsCode(mobile: string, code: string, scene: string): Promise<boolean> {
+    // TODO: Implement SMS code verification
+    // This is a placeholder implementation
+    // In production, verify against cached/stored codes
+    return code === '123456';
+  }
+
+  async sendSmsCode(mobile: string, scene: string): Promise<boolean> {
+    // TODO: Implement SMS code sending
+    // This is a placeholder implementation
+    // In production, integrate with SMS service provider
+    console.log(`SMS code sent to ${mobile} for ${scene}: 123456`);
+    return true;
+  }
+
+  async getSocialAuthUrl(type: string, redirectUri?: string): Promise<string> {
+    // TODO: Implement social auth URL generation
+    // This is a placeholder implementation
+    const baseUrls: Record<string, string> = {
+      github: 'https://github.com/login/oauth/authorize',
+      google: 'https://accounts.google.com/o/oauth2/v2/auth',
+      wechat: 'https://open.weixin.qq.com/connect/qrconnect',
+    };
+    
+    const baseUrl = baseUrls[type] || '';
+    return `${baseUrl}?client_id=YOUR_CLIENT_ID&redirect_uri=${redirectUri || 'http://localhost:3000/auth/callback'}`;
+  }
+
+  async getSocialUserInfo(type: string, code: string, state: string): Promise<any> {
+    // TODO: Implement social user info retrieval
+    // This is a placeholder implementation
+    // In production, exchange code for access token and fetch user info
+    return {
+      id: 'social_' + Math.random().toString(36).substring(7),
+      username: 'social_user',
+      email: 'social@example.com',
+      avatar: 'https://example.com/avatar.jpg',
+    };
+  }
+
+  generateToken(user: any) {
+    const payload = { 
+      sub: user.id, 
+      username: user.username,
+      email: user.email,
+    };
+    return {
+      accessToken: this.jwtService.sign(payload),
+      refreshToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
+    };
+  }
+
+  async verifyToken(token: string) {
+    try {
+      return this.jwtService.verify(token);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
+}

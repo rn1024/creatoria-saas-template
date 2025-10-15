@@ -1,0 +1,43 @@
+import { Entity, Column, ManyToMany, Tree, TreeChildren, TreeParent } from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { RoleDO } from './role.entity';
+
+@Entity('menus')
+@Tree('closure-table')
+export class MenuDO extends BaseEntity {
+  @Column()
+  name: string;
+
+  @Column({ nullable: true })
+  path?: string;
+
+  @Column({ nullable: true })
+  component?: string;
+
+  @Column({ nullable: true })
+  icon?: string;
+
+  @Column({ default: 0 })
+  sort: number;
+
+  @Column({ default: true })
+  visible: boolean;
+
+  @Column({ default: true })
+  status: boolean;
+
+  @Column({ nullable: true })
+  permission?: string;
+
+  @Column({ default: 0 })
+  type: number; // 0: 目录, 1: 菜单, 2: 按钮
+
+  @TreeChildren()
+  children: MenuDO[];
+
+  @TreeParent()
+  parent: MenuDO;
+
+  @ManyToMany(() => RoleDO, role => role.menus)
+  roles: RoleDO[];
+}

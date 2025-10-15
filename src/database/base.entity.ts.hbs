@@ -1,0 +1,266 @@
+import {
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  Column,
+  VersionColumn,
+  BeforeInsert,
+  BeforeUpdate,
+} from 'typeorm';
+{{#if (includes features 'swagger')}}
+import { ApiProperty, ApiHideProperty } from '@nestjs/swagger';
+{{/if}}
+import { Exclude, Transform } from 'class-transformer';
+
+/**
+ * 基础数据对象
+ * 所有实体都应该继承此类
+ */
+export abstract class BaseDO {
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '主键ID',
+    {{#if (includes features 'uuid')}}
+    type: String,
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    {{else}}
+    type: Number,
+    example: 1,
+    {{/if}}
+  })
+  {{/if}}
+  {{#if (includes features 'uuid')}}
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+  {{else}}
+  @PrimaryGeneratedColumn()
+  id: number;
+  {{/if}}
+
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '创建时间',
+    type: Date,
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  {{/if}}
+  @CreateDateColumn({
+    type: 'timestamp',
+    comment: '创建时间',
+  })
+  @Transform(({ value }) => value?.toISOString())
+  createdAt: Date;
+
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '更新时间',
+    type: Date,
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  {{/if}}
+  @UpdateDateColumn({
+    type: 'timestamp',
+    comment: '更新时间',
+  })
+  @Transform(({ value }) => value?.toISOString())
+  updatedAt: Date;
+
+  {{#if (includes features 'soft-delete')}}
+  {{#if (includes features 'swagger')}}
+  @ApiHideProperty()
+  {{/if}}
+  @DeleteDateColumn({
+    type: 'timestamp',
+    comment: '删除时间',
+    nullable: true,
+  })
+  @Exclude()
+  deletedAt?: Date;
+  {{/if}}
+
+  {{#if (includes features 'audit')}}
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '创建者',
+    required: false,
+    example: 'admin',
+  })
+  {{/if}}
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    comment: '创建者',
+  })
+  creator?: string;
+
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '更新者',
+    required: false,
+    example: 'admin',
+  })
+  {{/if}}
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    comment: '更新者',
+  })
+  updater?: string;
+  {{/if}}
+
+  {{#if (includes features 'tenant')}}
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '租户ID',
+    required: false,
+    example: 1,
+  })
+  {{/if}}
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '租户ID',
+  })
+  tenantId?: number;
+  {{/if}}
+
+  {{#if (includes features 'version')}}
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '版本号（乐观锁）',
+    example: 1,
+  })
+  {{/if}}
+  @VersionColumn({
+    comment: '版本号',
+  })
+  version: number;
+  {{/if}}
+
+  {{#if (includes features 'status')}}
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '状态',
+    enum: [0, 1],
+    example: 1,
+  })
+  {{/if}}
+  @Column({
+    type: 'int',
+    default: 1,
+    comment: '状态：0-禁用，1-启用',
+  })
+  status: number;
+  {{/if}}
+
+  {{#if (includes features 'remark')}}
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '备注',
+    required: false,
+    example: '这是一条备注',
+  })
+  {{/if}}
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: '备注',
+  })
+  remark?: string;
+  {{/if}}
+
+  {{#if (includes features 'sort')}}
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '排序',
+    example: 0,
+  })
+  {{/if}}
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: '排序',
+  })
+  sort: number;
+  {{/if}}
+
+  {{#if (includes features 'audit')}}
+  /**
+   * 插入前设置创建者
+   */
+  @BeforeInsert()
+  setCreator() {
+    // 这里可以从请求上下文中获取当前用户
+    // this.creator = getCurrentUser();
+  }
+
+  /**
+   * 更新前设置更新者
+   */
+  @BeforeUpdate()
+  setUpdater() {
+    // 这里可以从请求上下文中获取当前用户
+    // this.updater = getCurrentUser();
+  }
+  {{/if}}
+}
+
+/**
+ * 树形结构基础实体
+ */
+export abstract class TreeBaseDO extends BaseDO {
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '父级ID',
+    required: false,
+    {{#if (includes features 'uuid')}}
+    type: String,
+    {{else}}
+    type: Number,
+    {{/if}}
+    example: 0,
+  })
+  {{/if}}
+  @Column({
+    {{#if (includes features 'uuid')}}
+    type: 'varchar',
+    length: 36,
+    {{else}}
+    type: 'int',
+    {{/if}}
+    nullable: true,
+    comment: '父级ID',
+  })
+  {{#if (includes features 'uuid')}}
+  parentId?: string;
+  {{else}}
+  parentId?: number;
+  {{/if}}
+
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '祖级路径',
+    required: false,
+    example: '0,1,2',
+  })
+  {{/if}}
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: '祖级路径',
+  })
+  ancestors?: string;
+
+  {{#if (includes features 'swagger')}}
+  @ApiProperty({ 
+    description: '子节点',
+    type: [Object],
+    required: false,
+  })
+  {{/if}}
+  children?: TreeBaseDO[];
+}

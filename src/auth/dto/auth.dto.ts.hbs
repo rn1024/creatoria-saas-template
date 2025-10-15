@@ -1,0 +1,232 @@
+import { IsString, IsNotEmpty, MinLength, IsOptional{{#if (includes features 'email')}}, IsEmail{{/if}}{{#if (includes features 'sms')}}, IsMobilePhone{{/if}} } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+/**
+ * 登录请求VO
+ */
+export class AuthLoginReqVO {
+  @ApiProperty({ description: '用户名' })
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+
+  @ApiProperty({ description: '密码' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  password: string;
+
+  {{#if (includes features 'captcha')}}
+  @ApiPropertyOptional({ description: '验证码' })
+  @IsString()
+  @IsOptional()
+  captcha?: string;
+
+  @ApiPropertyOptional({ description: '验证码ID' })
+  @IsString()
+  @IsOptional()
+  captchaId?: string;
+  {{/if}}
+}
+
+/**
+ * 登录响应VO
+ */
+export class AuthLoginRespVO {
+  @ApiProperty({ description: '访问令牌' })
+  accessToken: string;
+
+  @ApiProperty({ description: '刷新令牌' })
+  refreshToken: string;
+
+  @ApiProperty({ description: '令牌过期时间（秒）' })
+  expiresIn?: number;
+
+  @ApiProperty({ description: '用户信息' })
+  user: any;
+}
+
+/**
+ * 注册请求VO
+ */
+export class AuthRegisterReqVO {
+  @ApiProperty({ description: '用户名' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(4)
+  username: string;
+
+  @ApiProperty({ description: '密码' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  password: string;
+  
+  {{#if (includes features 'email')}}
+  @ApiPropertyOptional({ description: '邮箱' })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+  {{/if}}
+
+  {{#if (includes features 'mobile')}}
+  @ApiPropertyOptional({ description: '手机号' })
+  @IsMobilePhone('zh-CN')
+  @IsOptional()
+  mobile?: string;
+  {{/if}}
+
+  {{#if (includes features 'captcha')}}
+  @ApiPropertyOptional({ description: '验证码' })
+  @IsString()
+  @IsOptional()
+  captcha?: string;
+
+  @ApiPropertyOptional({ description: '验证码ID' })
+  @IsString()
+  @IsOptional()
+  captchaId?: string;
+  {{/if}}
+}
+
+{{#if (includes features 'sms')}}
+/**
+ * 短信登录请求VO
+ */
+export class AuthSmsLoginReqVO {
+  @ApiProperty({ description: '手机号' })
+  @IsMobilePhone('zh-CN')
+  @IsNotEmpty()
+  mobile: string;
+
+  @ApiProperty({ description: '验证码' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(4)
+  code: string;
+}
+
+/**
+ * 发送短信验证码请求VO
+ */
+export class AuthSendSmsCodeReqVO {
+  @ApiProperty({ description: '手机号' })
+  @IsMobilePhone('zh-CN')
+  @IsNotEmpty()
+  mobile: string;
+
+  @ApiProperty({ 
+    description: '场景',
+    enum: ['login', 'register', 'reset-password', 'bind-mobile'],
+  })
+  @IsString()
+  @IsNotEmpty()
+  scene: string;
+
+  {{#if (includes features 'captcha')}}
+  @ApiPropertyOptional({ description: '图形验证码' })
+  @IsString()
+  @IsOptional()
+  captcha?: string;
+
+  @ApiPropertyOptional({ description: '验证码ID' })
+  @IsString()
+  @IsOptional()
+  captchaId?: string;
+  {{/if}}
+}
+{{/if}}
+
+/**
+ * 重置密码请求VO
+ */
+export class AuthResetPasswordReqVO {
+  @ApiProperty({ description: '用户名或手机号' })
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+
+  @ApiProperty({ description: '验证码' })
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+
+  @ApiProperty({ description: '新密码' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  password: string;
+}
+
+{{#if (includes features 'social')}}
+/**
+ * 社交登录请求VO
+ */
+export class AuthSocialLoginReqVO {
+  @ApiProperty({ 
+    description: '第三方平台类型',
+    enum: ['wechat', 'qq', 'weibo', 'github', 'google'],
+  })
+  @IsString()
+  @IsNotEmpty()
+  type: string;
+
+  @ApiProperty({ description: '授权码' })
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+
+  @ApiProperty({ description: '状态' })
+  @IsString()
+  @IsNotEmpty()
+  state: string;
+
+  @ApiPropertyOptional({ description: '重定向URI' })
+  @IsString()
+  @IsOptional()
+  redirectUri?: string;
+}
+{{/if}}
+
+/**
+ * 权限信息响应VO
+ */
+export class AuthPermissionInfoRespVO {
+  @ApiProperty({ description: '权限列表', type: [String] })
+  permissions: string[];
+
+  @ApiProperty({ description: '角色列表', type: [String] })
+  roles: string[];
+
+  @ApiProperty({ description: '菜单列表', required: false })
+  menus?: any[];
+
+  @ApiProperty({ description: '用户信息' })
+  user: any;
+}
+
+/**
+ * 刷新Token请求VO
+ */
+export class RefreshTokenReqVO {
+  @ApiProperty({ description: '刷新令牌' })
+  @IsString()
+  @IsNotEmpty()
+  refreshToken: string;
+}
+
+/**
+ * 修改密码请求VO
+ */
+export class ChangePasswordReqVO {
+  @ApiProperty({ description: '旧密码' })
+  @IsString()
+  @IsNotEmpty()
+  oldPassword: string;
+
+  @ApiProperty({ description: '新密码' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  newPassword: string;
+}

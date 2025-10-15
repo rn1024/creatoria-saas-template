@@ -1,0 +1,26 @@
+import { Entity, Column } from 'typeorm';
+import { BaseEntity } from './base.entity';
+
+@Entity('login_logs')
+export class LoginLogDO extends BaseEntity {
+  @Column()
+  userId: number;
+
+  @Column()
+  username: string;
+
+  @Column()
+  logType: number; // 0: 登出, 1: 登录
+
+  @Column({ nullable: true })
+  ip?: string;
+
+  @Column({ nullable: true })
+  userAgent?: string;
+
+  @Column()
+  result: boolean;
+
+  @Column('text', { nullable: true })
+  errorMsg?: string;
+}

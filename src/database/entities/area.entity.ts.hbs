@@ -1,0 +1,30 @@
+import { Entity, Column, Tree, TreeChildren, TreeParent } from 'typeorm';
+import { BaseEntity } from './base.entity';
+
+@Entity('areas')
+@Tree('closure-table')
+export class AreaDO extends BaseEntity {
+  @Column()
+  name: string;
+
+  @Column({ unique: true })
+  code: string;
+
+  @Column({ default: 0 })
+  type: number; // 0: 国家, 1: 省份, 2: 城市, 3: 区县
+
+  @Column({ nullable: true })
+  latitude?: number;
+
+  @Column({ nullable: true })
+  longitude?: number;
+
+  @Column({ default: 0 })
+  sort: number;
+
+  @TreeChildren()
+  children: AreaDO[];
+
+  @TreeParent()
+  parent: AreaDO;
+}

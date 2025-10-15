@@ -1,0 +1,69 @@
+import { Controller, Get, Post, Body, Query, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { SystemService } from './system.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../common';
+
+// 从环境变量动态读取系统前缀
+const systemPrefix = process.env.SYSTEM_PREFIX || '{{systemPrefix}}';
+
+@ApiTags('System')
+@Controller(systemPrefix)
+export class SystemController {
+  constructor(private readonly systemService: SystemService) {}
+
+  @Get('info')
+  @Public()
+  @ApiOperation({ summary: '获取系统信息' })
+  async getSystemInfo() {
+    return this.systemService.getSystemInfo();
+  }
+
+  @Get('health')
+  @Public()
+  @ApiOperation({ summary: '健康检查' })
+  async healthCheck() {
+    return this.systemService.healthCheck();
+  }
+
+  @Get('config')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取所有配置' })
+  async getAllConfigs() {
+    return this.systemService.getAllConfigs();
+  }
+
+  @Get('config/:key')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取指定配置' })
+  async getConfig(@Param('key') key: string) {
+    const value = await this.systemService.getConfig(key);
+    return { key, value };
+  }
+
+  @Post('config')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '设置配置' })
+  async setConfig(@Body() body: { key: string; value: string; description?: string }) {
+    return this.systemService.setConfig(body.key, body.value, body.description);
+  }
+
+  @Get('logs')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取系统日志' })
+  async getLogs(@Query() query: any) {
+    return this.systemService.getLogs(query);
+  }
+
+  @Post('logs')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '记录系统日志' })
+  async log(@Body() body: any) {
+    return this.systemService.log(body);
+  }
+}

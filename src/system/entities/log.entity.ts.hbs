@@ -1,0 +1,49 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
+
+@Entity('sys_log')
+@Index(['userId'])
+@Index(['module'])
+@Index(['createdAt'])
+export class SysLog {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ nullable: true, comment: '用户ID' })
+  userId: number;
+
+  @Column({ nullable: true, comment: '用户名' })
+  username: string;
+
+  @Column({ comment: '模块' })
+  module: string;
+
+  @Column({ comment: '操作' })
+  action: string;
+
+  @Column({ nullable: true, comment: '请求方法' })
+  method: string;
+
+  @Column({ nullable: true, comment: '请求URL' })
+  url: string;
+
+  @Column({ nullable: true, comment: 'IP地址' })
+  ip: string;
+
+  @Column({ nullable: true, comment: '用户代理' })
+  userAgent: string;
+
+  @Column({ type: 'text', nullable: true, comment: '请求参数' })
+  params: string;
+
+  @Column({ type: 'text', nullable: true, comment: '响应结果' })
+  result: string;
+
+  @Column({ default: 'info', comment: '日志级别' })
+  level: string;
+
+  @Column({ nullable: true, comment: '执行时间(ms)' })
+  duration: number;
+
+  @CreateDateColumn({ comment: '创建时间' })
+  createdAt: Date;
+}
