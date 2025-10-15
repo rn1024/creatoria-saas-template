@@ -15,10 +15,14 @@ import {
   AuthLoginRespVO,
   AuthPermissionInfoRespVO,
   AuthRegisterReqVO,
+  {{#if (includes features 'sms')}}
   AuthSmsLoginReqVO,
   AuthSendSmsCodeReqVO,
+  {{/if}}
   AuthResetPasswordReqVO,
+  {{#if (includes features 'social')}}
   AuthSocialLoginReqVO,
+  {{/if}}
 } from './dto/auth.dto';
 import { CommonResult } from '@app/common';
 import { Public } from '@app/auth';
@@ -99,6 +103,7 @@ export class AuthController {
     return CommonResult.success(result);
   }
 
+  {{#if (includes features 'sms')}}
   @Post('/sms-login')
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -120,6 +125,7 @@ export class AuthController {
     await this.authBusinessService.sendSmsCode(sendSmsCodeReqVO);
     return CommonResult.success(true);
   }
+  {{/if}}
 
   @Post('/reset-password')
   @Public()
@@ -132,6 +138,7 @@ export class AuthController {
     return CommonResult.success(true);
   }
 
+  {{#if (includes features 'social')}}
   @Get('/social-auth-redirect')
   @Public()
   @ApiOperation({ summary: '社交登录重定向' })
@@ -156,4 +163,5 @@ export class AuthController {
     const result = await this.authBusinessService.socialLogin(socialLoginReqVO);
     return CommonResult.success(result);
   }
+  {{/if}}
 }
